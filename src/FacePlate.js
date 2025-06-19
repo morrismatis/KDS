@@ -3,8 +3,20 @@ import * as THREE from 'three';
 // ...existing code...
 
 const textureLoader = new THREE.TextureLoader();
-const faceplateTexture = textureLoader.load('/faceplate.jpg');
-const woodPanelTexture = textureLoader.load('/jGlzr.jpg');
+
+const faceplateTexture = textureLoader.load(
+  './faceplate.jpg',
+  undefined,
+  undefined,
+  (err) => { console.error('Failed to load faceplate.jpg', err); }
+);
+
+const woodPanelTexture = textureLoader.load(
+  './jGlzr.jpg',
+  undefined,
+  undefined,
+  (err) => { console.error('Failed to load jGlzr.jpg', err); }
+);
 
 // Example: create face plate mesh with texture
 const facePlateGeometry = new THREE.BoxGeometry(width, height, depth);
