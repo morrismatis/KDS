@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Krautrock Drum Machine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Wood grain background for the body */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #3d2c20 0%, #2a1f18 50%, #3d2c20 100%); /* Dark wood grain simulation */
+            color: #e2e8f0; /* Light text for contrast */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            background-attachment: fixed; /* Keep wood grain fixed */
+        }
+
+        /* Brushed metal black faceplate for the container */
+        .container {
+            background-color: #1a1a1a; /* Darker black */
+            background: linear-gradient(180deg, #2a2a2a, #1a1a1a); /* Subtle brushed effect */
+            border-radius: 1rem;
+            padding: 2.5rem;
+            box-shadow: 0 15px 25px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.05); /* Deep shadow with subtle inner highlight */
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            border: 1px solid #333333;
+        }
+
+        h1 {
+            font-family: 'Inter', sans-serif; /* Keep Inter but make it bolder */
+            font-size: 2.5rem; /* Slightly larger */
+            font-weight: 700; /* Extra bold */
+            margin-bottom: 2rem;
+            color: #E02B20; /* Vibrant red from Neu! artwork */
+            text-shadow: 0 0 8px rgba(224, 43, 32, 0.6); /* Subtle glow effect */
+        }
+
+        .control-group {
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        label {
+            font-size: 1.125rem;
+            margin-bottom: 0.75rem;
+            color: #cbd5e0;
+            font-weight: 600; /* Make labels a bit bolder */
+        }
+
+        /* Tempo Input */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 80%;
+            height: 8px;
+            background: #4a5568; /* Darker track */
+            border-radius: 5px;
+            outline: none;
+            opacity: 0.9;
+            transition: opacity .2s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #E02B20; /* Red thumb */
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(224, 43, 32, 0.7); /* Red glow */
+            border: 2px solid #ff6655; /* Lighter red border */
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #E02B20; /* Red thumb */
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(224, 43, 32, 0.7); /* Red glow */
+            border: 2px solid #ff6655; /* Lighter red border */
+        }
+
+        #tempoValue {
+            margin-top: 0.5rem;
+            font-size: 1rem;
+            color: #a0aec0;
+        }
+
+        .tempo-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .tempo-input-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tempo-input-group input[type="number"] {
+            width: 80px;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #4a5568;
+            background-color: #1a1a1a; /* Darker input background */
+            color: #E02B20; /* Red text for input */
+            text-align: center;
+            font-size: 1rem;
+            outline: none;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+        }
+
+        .tempo-input-group input[type="number"]:focus {
+            border-color: #E02B20; /* Red focus border */
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 5px rgba(224, 43, 32, 0.5);
+        }
+        .tempo-input-group span {
+            color: #cbd5e0;
+        }
+
+
+        /* Style Knob (simulated with radio buttons) */
+        .knob-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            background-color: #333333; /* Darker grey for knob base */
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 2rem auto;
+            box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.8), 0 5px 15px rgba(0, 0, 0, 0.5); /* More prominent shadows */
+            border: 2px solid #555555;
+            background-image: radial-gradient(circle at 50% 50%, #444444, #222222); /* Knob surface detail */
+        }
+
+        .knob-pointer {
+            position: absolute;
+            width: 6px;
+            height: 30px;
+            background-color: #E02B20; /* Red pointer */
+            border-radius: 3px;
+            transform-origin: bottom center;
+            bottom: 50%;
+            left: calc(50% - 3px);
+            transition: transform 0.2s ease-in-out;
+            box-shadow: 0 0 10px rgba(224, 43, 32, 0.8); /* Stronger red glow */
+        }
+
+        .style-options {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none; 
+        }
+
+        .style-option {
+            position: absolute;
+            transform-origin: 100px 100px; 
+            pointer-events: all; 
+            font-size: 0.875rem; 
+            color: #a0aec0;
+            user-select: none;
+            cursor: pointer;
+        }
+
+        .style-option input[type="radio"] {
+            display: none; 
+        }
+
+        .style-option span {
+            display: block;
+            padding: 5px;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .style-option input[type="radio"]:checked + span {
+            background-color: #E02B20; /* Red for selected */
+            color: #fff;
+            font-weight: 700; /* Bolder selected text */
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5); /* White text shadow */
+        }
+
+        /* Dropdown for Bar Length */
+        .bar-length-select, .sound-type-select {
+            margin-top: 1rem;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            border: 1px solid #4a5568;
+            background-color: #1a1a1a;
+            color: #e2e8f0;
+            font-size: 1rem;
+            outline: none;
+            cursor: pointer;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6);
+        }
+
+        .bar-length-select:focus, .sound-type-select:focus {
+            border-color: #E02B20;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 5px rgba(224, 43, 32, 0.5);
+        }
+
+        /* Radio buttons for sound type */
+        .form-radio {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid #E02B20; /* Red border */
+            background-color: #2d3748;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+
+        .form-radio:checked {
+            background-color: #E02B20; /* Red fill when checked */
+            border-color: #E02B20;
+            box-shadow: 0 0 5px rgba(224, 43, 32, 0.7); /* Red glow */
+        }
+
+        .form-radio:disabled {
+            opacity: 0.4; /* Slightly less opaque when disabled */
+            cursor: not-allowed;
+        }
+
+
+        /* Buttons */
+        .button {
+            background: linear-gradient(180deg, #E02B20, #C21F14); /* Red gradient for buttons */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1.125rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4); /* More prominent shadow */
+            margin: 0 0.5rem;
+            min-width: 120px;
+            outline: none;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .button:hover {
+            background: linear-gradient(180deg, #C21F14, #E02B20); /* Reverse gradient on hover */
+            transform: translateY(-3px); /* More pronounced lift */
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            background: #C21F14; /* Solid darker red on active */
+        }
+        
+        .button:disabled {
+            background: #555555;
+            cursor: not-allowed;
+            transform: translateY(0);
+            box-shadow: none;
+            opacity: 0.6;
+        }
+
+        .button-group {
+            display: flex;
+            justify-content: center;
+            gap: 1rem; 
+            margin-top: 2rem;
+        }
+
+        /* Message Box */
+        .message-box {
+            background-color: #333333; /* Darker message box */
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1.5rem;
+            text-align: left;
+            border: 1px solid #555555;
+            word-break: break-all;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Krautrock Beat Machine</h1>
+
+        <div class="control-group">
+            <label for="tempo">Tempo:</label>
+            <input type="range" id="tempo" min="60" max="180" value="120">
+            <span id="tempoValue">120 BPM</span>
+            <div class="tempo-controls">
+                <div class="tempo-input-group">
+                    <input type="number" id="bpmInput" min="60" max="180" value="120">
+                    <span>BPM</span>
+                </div>
+                <button id="tapTempoButton" class="button">Tap Tempo</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label for="barLength">Pattern Length:</label>
+            <select id="barLength" class="bar-length-select">
+                <option value="1">1 Bar</option>
+                <option value="2">2 Bars</option>
+                <option value="3">3 Bars</option>
+                <option value="4">4 Bars</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Drum Sound Type:</label>
+            <div class="flex gap-4">
+                <label class="inline-flex items-center">
+                    <input type="radio" name="soundType" value="synthesized" checked class="form-radio" id="soundTypeSynthesized">
+                    <span class="ml-2 text-white">Synthesized</span>
+                </label>
+                <label class="inline-flex items-center">
+                    <input type="radio" name="soundType" value="sampled" class="form-radio" id="soundTypeSampled">
+                    <span class="ml-2 text-white">Sampled</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>Style:</label>
+            <div class="knob-container" id="styleKnob">
+                <div class="knob-pointer" id="knobPointer"></div>
+                <div class="style-options">
+                    <!-- Options will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button id="playButton" class="button">Play</button>
+            <button id="stopButton" class="button">Stop</button>
+        </div>
+
+        <div class="message-box hidden" id="messageBox"></div>
+    </div>
+
+    <script>
+        // Global variables for Firebase configuration, if applicable (will be provided by Canvas runtime)
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
+
+        // Tone.js variables
+        let kickSynth;
+        let snareSynth;
+        let hihatSynth;
+        let snareNoise; 
+        let percussionSynth; 
+        let drumSampler; // New: Sampler for sampled drums
+
+        let drumLoop;
+        let currentPattern = [];
+        let isPlaying = false;
+
+        // Base patterns (each entry is an array of 1-bar, 16-step patterns)
+        let baseStyles = {
+            "Neu!": [
+                // Bar 1: Classic motorik - kick on 1, snare on 5, consistent 16th hi-hats
+                [["C2", "F#2"], ["F#2"], ["F#2"], ["F#2"], ["C3", "F#2"], ["F#2"], ["F#2"], ["F#2"],
+                 ["C2", "F#2"], ["F#2"], ["F#2"], ["F#2"], ["C3", "F#2"], ["F#2"], ["F#2"], ["F#2"]],
+                // Bar 2: Slight hi-hat variation or a ghost kick
+                [["C2", "F#2"], ["F#2"], ["F#2"], ["C2", "F#2"], ["C3", "F#2"], ["F#2"], ["F#2"], ["F#2"],
+                 ["C2", "F#2"], ["F#2"], ["F#2"], ["F#2"], ["C3", "F#2"], ["F#2"], ["F#2"], ["F#2"]],
+                // Bar 3: Return to basic motorik or another minor variation
+                [["C2", "F#2"], ["F#2"], ["F#2"], ["F#2"], ["C3", "F#2"], ["F#2"], ["F#2"], ["F#2"],
+                 ["C2", "F#2"], ["F#2"], ["F#2"], ["F#2"], ["C3", "F#2"], ["F#2"], ["F#2"], ["F#2"]],
+                // Bar 4: Subtle ride or light crash on the last beat
+                [["C2", "F#2"], ["F#2"], ["F#2"], ["F#2"], ["C3", "F#2"], ["F#2"], ["F#2"], ["F#2"],
+                 ["C2", "F#2"], ["F#2"], ["F#2"], ["F#2"], ["C3", "F#2"], ["F#2"], ["F#2"], ["G#2"]] 
+            ],
+            "Kraftwerk": [
+                // Bar 1: Standard four-on-the-floor kick, snare on 2 & 4, accented off-beat hi-hats
+                [["C2", "F#2"], ["F#2"], ["C2", "F#2"], ["F#2"], ["C2", "C3", "F#2"], ["F#2"], ["C2", "F#2"], ["F#2"], 
+                 ["C2", "F#2"], ["F#2"], ["C2", "F#2"], ["F#2"], ["C2", "C3", "F#2"], ["F#2"], ["C2", "F#2"], ["F#2"]],
+                // Bar 2: Subtle percussive fill with G#2
+                [["C2", "F#2"], ["F#2"], ["C2", "F#2"], ["F#2"], ["C2", "C3", "F#2"], ["F#2"], ["C2", "F#2"], ["F#2", "G#2"], 
+                 ["C2", "F#2"], ["F#2"], ["C2", "F#2"], ["F#2"], ["C2", "C3", "F#2"], ["F#2"], ["C2", "F#2"], ["F#2"]],
+                // Bar 3: As Bar 1
+                [["C2", "F#2"], ["F#2"], ["C2", "F#2"], ["F#2"], ["C2", "C3", "F#2"], ["F#2"], ["C2", "F#2"], ["F#2"], 
+                 ["C2", "F#2"], ["F#2"], ["C2", "F#2"], ["F#2"], ["C2", "C3", "F#2"], ["F#2"], ["C2", "F#2"], ["F#2"]],
+                // Bar 4: Slight pause/variation at the end
+                [["C2", "F#2"], ["F#2"], ["C2", "F#2"], ["F#2"], ["C2", "C3", "F#2"], ["F#2"], ["C2", "F#2"], ["F#2"], 
+                 ["C2", "F#2"], ["F#2"], ["C2", "F#2"], ["F#2"], ["C2", "C3", "F#2"], ["F#2"], ["C2", "F#2"], []] 
+            ],
+            "Cluster": [
+                // Bar 1: Very sparse, atmospheric
+                [["C2"], [], [], [], [], [], [], ["F#2"], [], [], [], [], [], ["C3"], [], []],
+                // Bar 2: Adds a delayed hi-hat or gentle ambient hit
+                [[], [], ["F#2"], [], [], ["C2"], [], [], [], ["F#2"], [], [], [], [], ["C3"], []],
+                // Bar 3: Shifts main hits
+                [[], ["C2"], [], [], [], [], ["F#2"], [], [], [], ["C3"], [], [], [], [], []],
+                // Bar 4: Almost entirely ambient percussion/silence
+                [[], [], [], [], [], [], [], [], [], ["F#2"], [], [], [], [], [], []]
+            ],
+            "Harmonia": [
+                // Bar 1: Softer motorik, continuous hi-hats
+                [["C2", "F#2"], ["F#2"], ["F#2"], ["F#2"], ["C3", "F#2"], ["F#2"], ["F#2"], ["F#2"],
+                 ["C2", "F#2"], ["F#2"], ["F#2"], ["F#2"], ["C3", "F#2"], ["F#2"], ["F#2"], ["F#2"]],
+                // Bar 2: Subtle melodic percussion with G#2
+                [["C2", "F#2"], ["F#2"], ["F#2"], ["G#2"], ["C3", "F#2"], ["F#2"], ["F#2"], ["F#2"],
+                 ["C2", "F#2"], ["F#2"], ["F#2"], ["G#2"], ["C3", "F#2"], ["F#2"], ["F#2"], ["F#2"]],
+                // Bar 3: Slight syncopation in kick/snare
+                [["C2", "F#2"], ["F#2"], ["F#2"], ["F#2"], ["C3", "F#2"], ["C2", "F#2"], ["F#2"], ["F#2"],
+                 ["C2", "F#2"], ["F#2"], ["F#2"], ["F#2"], ["C3", "F#2"], ["C2", "F#2"], ["F#2"], ["F#2"]],
+                // Bar 4: Small flourish, slightly heavier hi-hats before loop
+                [["C2", "F#2"], ["F#2"], ["F#2"], ["F#2"], ["C3", "F#2"], ["F#2", "G#2"], ["F#2"], ["F#2"],
+                 ["C2", "F#2"], ["F#2"], ["F#2"], ["F#2"], ["C3", "F#2"], ["F#2", "G#2"], ["F#2"], ["F#2"]]
+            ],
+            "Faust": [
+                // Bar 1: Raw, almost random hits, industrial feel
+                [["C2", "C3", "F#2"], [], ["F#2"], ["C2"], [], ["F#2"], ["C3"], [], 
+                 ["C2"], ["F#2"], [], ["C3"], ["F#2"], [], [], ["C2", "F#2"]],
+                // Bar 2: More sparse, unusual hits
+                [[], ["C2"], [], ["F#2"], [], [], [], ["C3"], [], [], ["C2"], [], ["F#2"], [], [], []],
+                // Bar 3: Burst of rapid, noisy hits
+                [["C2", "C3", "F#2"], ["C2", "C3", "F#2"], ["C2", "C3", "F#2"], [], ["C2"], ["F#2"], [], ["C3"], 
+                 [], ["F#2"], ["C2"], [], ["F#2"], [], [], []],
+                // Bar 4: Breakdown or near silence with a single final hit
+                [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], ["C2"]]
+            ],
+            "Can": [
+                // Bar 1: Tight, driving groove
+                [["C2", "F#2"], ["F#2"], ["C3"], ["F#2"], ["C2", "F#2"], ["F#2"], ["C3"], ["F#2"], 
+                 ["C2", "F#2"], ["F#2"], ["C3"], ["F#2"], ["C2", "F#2"], ["F#2"], ["C3"], ["F#2"]],
+                // Bar 2: Ghost notes on snare, subtle kick variation
+                [["C2", "F#2"], ["C3", "F#2"], ["C3"], ["F#2"], ["C2", "F#2"], ["F#2"], ["C3", "F#2"], ["F#2"], 
+                 ["C2", "F#2"], ["F#2"], ["C3"], ["F#2"], ["C2", "F#2"], ["C3", "F#2"], ["C3"], ["F#2"]],
+                // Bar 3: Shifted emphasis, slightly different hi-hat with a percussion hit
+                [["C2", "F#2"], ["F#2"], ["C3"], ["F#2"], ["C2", "F#2", "G#2"], ["F#2"], ["C3"], ["F#2"], 
+                 ["C2", "F#2"], ["F#2"], ["C3"], ["F#2"], ["C2", "F#2"], ["F#2", "G#2"], ["C3"], ["F#2"]],
+                // Bar 4: Mini-fill or slightly more open hi-hat
+                [["C2", "F#2"], ["F#2"], ["C3"], ["F#2"], ["C2"], ["C3", "F#2"], ["C3"], ["F#2"], 
+                 ["C2", "F#2"], ["F#2"], ["C3"], ["F#2"], ["C2", "F#2", "G#2"], [], [], ["F#2"]]
+            ]
+        };
+
+        // UI Elements
+        const tempoSlider = document.getElementById('tempo');
+        const tempoValueDisplay = document.getElementById('tempoValue');
+        const bpmInput = document.getElementById('bpmInput'); 
+        const tapTempoButton = document.getElementById('tapTempoButton'); 
+        const barLengthSelect = document.getElementById('barLength'); 
+        const styleKnobContainer = document.getElementById('styleKnob');
+        const knobPointer = document.getElementById('knobPointer');
+        const styleOptionsContainer = styleKnobContainer.querySelector('.style-options');
+        const playButton = document.getElementById('playButton');
+        const stopButton = document.getElementById('stopButton');
+        const messageBox = document.getElementById('messageBox');
+        const soundTypeSynthesizedRadio = document.getElementById('soundTypeSynthesized');
+        const soundTypeSampledRadio = document.getElementById('soundTypeSampled');
+
+
+        let activeStyle = "Neu!"; // Default style
+        let activeBarLength = 1; // Default bar length
+        let activeSoundType = 'synthesized'; // Default sound type
+
+        // Tap Tempo variables
+        let tapTimes = [];
+        const TAP_RESET_THRESHOLD = 2000; // milliseconds to reset tap count if no tap occurs
+
+        // Function to display messages
+        function showMessage(message, isError = false) {
+            messageBox.textContent = message;
+            messageBox.classList.remove('hidden');
+            if (isError) {
+                messageBox.style.backgroundColor = '#e53e3e'; // Red for error
+            } else {
+                messageBox.style.backgroundColor = '#4a5568'; // Default
+            }
+            // Hide message after a few seconds
+            setTimeout(() => {
+                messageBox.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Function to set tempo, updating all related UI elements
+        function setTempo(bpm) {
+            // Clamp BPM to slider's min/max for consistency
+            const clampedBpm = Math.max(
+                parseInt(tempoSlider.min),
+                Math.min(parseInt(tempoSlider.max), Math.round(bpm))
+            );
+
+            tempoSlider.value = clampedBpm;
+            tempoValueDisplay.textContent = `${clampedBpm} BPM`;
+            bpmInput.value = clampedBpm;
+            if (Tone.Transport) {
+                Tone.Transport.bpm.value = clampedBpm;
+            }
+        }
+
+        // Initialize Tone.js and Synths
+        async function initializeAudio() {
+            try {
+                await Tone.start();
+                console.log('Audio context started');
+                showMessage("Audio context started. Initializing synths and loading samples...");
+
+                // Initialize Synths
+                kickSynth = new Tone.MembraneSynth({
+                    pitchDecay: 0.05, octaves: 10, oscillator: { type: 'sine' },
+                    envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 0.8, amplitude: 1.2 }
+                }).toDestination();
+
+                snareSynth = new Tone.MembraneSynth({
+                    pitchDecay: 0.05, octaves: 5, oscillator: { type: 'sine' },
+                    envelope: { attack: 0.001, decay: 0.1, sustain: 0.01, release: 0.2, amplitude: 1.0 }
+                }).toDestination();
+
+                snareNoise = new Tone.NoiseSynth({ 
+                    noise: { type: 'white' },
+                    envelope: { attack: 0.001, decay: 0.15, sustain: 0.0, release: 0.05 }
+                }).toDestination();
+
+                hihatSynth = new Tone.NoiseSynth({
+                    noise: { type: 'white' },
+                    envelope: { attack: 0.001, decay: 0.05, sustain: 0.0, release: 0.05 }
+                }).toDestination();
+
+                percussionSynth = new Tone.Synth({
+                    oscillator: { type: 'triangle' },
+                    envelope: { attack: 0.01, decay: 0.1, sustain: 0.0, release: 0.1 },
+                    volume: -10 
+                }).toDestination();
+
+                // Initialize Sampler
+                drumSampler = new Tone.Sampler({
+                    urls: {
+                        "C2": "https://tonejs.github.io/audio/drum-samples/kick-808.mp3",
+                        "C3": "https://tonejs.github.io/audio/drum-samples/snare-808.mp3",
+                        "F#2": "https://tonejs.github.io/audio/drum-samples/hihat.mp3",
+                        "G#2": "https://tonejs.github.io/audio/drum-samples/clap.mp3" // Using clap for generic percussion
+                    },
+                    onload: () => {
+                        showMessage("Sampled drums loaded successfully!");
+                        // If samples load, ensure the radio button is enabled
+                        soundTypeSampledRadio.disabled = false;
+                    },
+                    onerror: (e) => {
+                        showMessage(`Error loading sampled drums: ${e}. Reverting to synthesized drums.`, true);
+                        console.error("Error loading sampled drums:", e);
+                        // If samples fail, force synthesized and disable the sampled option
+                        soundTypeSynthesizedRadio.checked = true;
+                        activeSoundType = 'synthesized';
+                        soundTypeSampledRadio.disabled = true;
+                        updatePattern(activeStyle, activeBarLength); // Update pattern to use synths
+                    }
+                }).toDestination();
+
+
+                // Set initial tempo
+                setTempo(tempoSlider.value);
+                // Set initial pattern with default bar length and sound type
+                updatePattern(activeStyle, activeBarLength);
+
+            } catch (error) {
+                showMessage(`Failed to start audio: ${error.message}. Please enable audio playback.`, true);
+                console.error("Error initializing audio:", error);
+            }
+        }
+
+        // Function to update the drum pattern based on selected style and bar length
+        function updatePattern(styleName, numBars) {
+            const styleVariations = baseStyles[styleName]; 
+            currentPattern = [];
+
+            for (let i = 0; i < numBars; i++) {
+                currentPattern = currentPattern.concat(styleVariations[i % styleVariations.length]);
+            }
+
+            if (drumLoop) {
+                drumLoop.dispose(); 
+            }
+
+            drumLoop = new Tone.Sequence((time, step) => {
+                const notesToPlay = currentPattern[step];
+                if (notesToPlay && notesToPlay.length > 0) {
+                    notesToPlay.forEach(note => {
+                        if (activeSoundType === 'synthesized') {
+                            switch (note) {
+                                case "C2": // Kick
+                                    kickSynth.triggerAttackRelease("C2", "16n", time);
+                                    break;
+                                case "C3": // Snare
+                                    snareSynth.triggerAttackRelease("C3", "16n", time);
+                                    snareNoise.triggerAttackRelease("16n", time);
+                                    break;
+                                case "F#2": // Hi-Hat
+                                    hihatSynth.triggerAttackRelease("16n", time);
+                                    break;
+                                case "G#2": // General Percussion/Ride
+                                    percussionSynth.triggerAttackRelease("G#2", "16n", time); 
+                                    break;
+                                default:
+                                    console.warn(`Unknown note for synthesized drum synth: ${note}`);
+                            }
+                        } else if (activeSoundType === 'sampled') {
+                            // Check if sampler is loaded and the note is available in the sampler
+                            if (drumSampler && drumSampler.loaded && drumSampler.has(note)) {
+                                drumSampler.triggerAttackRelease(note, "16n", time);
+                            } else {
+                                // Fallback to synthesized if sampled note isn't available
+                                console.warn(`Note ${note} not available in sampler, using synth as fallback.`);
+                                switch (note) {
+                                    case "C2": kickSynth.triggerAttackRelease("C2", "16n", time); break;
+                                    case "C3": snareSynth.triggerAttackRelease("C3", "16n", time); snareNoise.triggerAttackRelease("16n", time); break;
+                                    case "F#2": hihatSynth.triggerAttackRelease("16n", time); break;
+                                    case "G#2": percussionSynth.triggerAttackRelease("G#2", "16n", time); break;
+                                    default: console.warn(`Note ${note} not available in sampler, no synth fallback for this note.`);
+                                }
+                            }
+                        }
+                    });
+                }
+            }, Array.from({ length: currentPattern.length }, (_, i) => i), "16n").start(0);
+        }
+
+        // --- Event Listeners ---
+
+        tempoSlider.addEventListener('input', (event) => {
+            setTempo(event.target.value);
+        });
+
+        bpmInput.addEventListener('change', (event) => {
+            let newBpm = parseInt(event.target.value);
+            if (isNaN(newBpm)) {
+                newBpm = parseInt(tempoSlider.value); 
+                showMessage("Invalid BPM. Please enter a number.", true);
+            }
+            setTempo(newBpm);
+        });
+
+        tapTempoButton.addEventListener('click', () => {
+            const now = performance.now(); 
+
+            if (tapTimes.length > 0 && (now - tapTimes[tapTimes.length - 1]) > TAP_RESET_THRESHOLD) {
+                tapTimes = [];
+                showMessage("Tap tempo reset.");
+            }
+
+            tapTimes.push(now);
+
+            if (tapTimes.length > 4) {
+                tapTimes.shift(); 
+            }
+
+            if (tapTimes.length > 1) {
+                let totalInterval = 0;
+                for (let i = 0; i < tapTimes.length - 1; i++) {
+                    totalInterval += tapTimes[i+1] - tapTimes[i];
+                }
+                const averageInterval = totalInterval / (tapTimes.length - 1);
+                const calculatedBpm = 60000 / averageInterval; 
+
+                setTempo(calculatedBpm);
+                showMessage(`Tapped tempo: ${Math.round(calculatedBpm)} BPM`);
+            } else {
+                showMessage("Keep tapping to set tempo.");
+            }
+        });
+
+        barLengthSelect.addEventListener('change', (event) => {
+            activeBarLength = parseInt(event.target.value);
+            updatePattern(activeStyle, activeBarLength);
+            showMessage(`Pattern length set to ${activeBarLength} bar(s).`);
+        });
+
+        // Event listener for drum sound type selection
+        document.querySelectorAll('input[name="soundType"]').forEach(radio => {
+            radio.addEventListener('change', (event) => {
+                activeSoundType = event.target.value;
+                updatePattern(activeStyle, activeBarLength);
+                showMessage(`Drum sound type switched to: ${activeSoundType}.`);
+            });
+        });
+
+        function setupStyleKnob() {
+            const styleNames = Object.keys(baseStyles); 
+            const numStyles = styleNames.length;
+            const angleIncrement = numStyles > 1 ? 240 / (numStyles - 1) : 0; 
+
+            styleNames.forEach((style, index) => {
+                const label = document.createElement('label');
+                label.classList.add('style-option');
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = 'style';
+                radio.value = style;
+                if (style === activeStyle) {
+                    radio.checked = true;
+                }
+                const span = document.createElement('span');
+                span.textContent = style;
+
+                label.appendChild(radio);
+                label.appendChild(span);
+                styleOptionsContainer.appendChild(label);
+
+                const angle = -120 + (index * angleIncrement); 
+                label.style.transform = `rotate(${angle}deg) translate(0, -90px) rotate(${-angle}deg)`; 
+                label.dataset.angle = angle; 
+
+                radio.addEventListener('change', (event) => {
+                    activeStyle = event.target.value;
+                    updatePattern(activeStyle, activeBarLength); 
+                    const selectedAngle = parseFloat(label.dataset.angle);
+                    knobPointer.style.transform = `translate(-50%, -50%) rotate(${selectedAngle}deg)`; 
+                });
+
+                if (style === activeStyle) {
+                    knobPointer.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+                }
+            });
+        }
+
+        playButton.addEventListener('click', async () => {
+            if (!isPlaying) {
+                if (Tone.Transport.state !== 'started') {
+                    await Tone.start(); 
+                }
+                Tone.Transport.start();
+                isPlaying = true;
+                playButton.textContent = 'Playing...';
+                playButton.disabled = true;
+                document.querySelectorAll('.style-option input[type="radio"]').forEach(radio => radio.disabled = true);
+                barLengthSelect.disabled = true; 
+                document.querySelectorAll('input[name="soundType"]').forEach(radio => radio.disabled = true); 
+                stopButton.disabled = false;
+                showMessage(`Playing ${activeStyle} beat at ${tempoSlider.value} BPM for ${activeBarLength} bar(s) with ${activeSoundType} drums.`);
+            }
+        });
+
+        stopButton.addEventListener('click', () => {
+            if (isPlaying) {
+                Tone.Transport.stop();
+                isPlaying = false;
+                playButton.textContent = 'Play';
+                playButton.disabled = false;
+                document.querySelectorAll('.style-option input[type="radio"]').forEach(radio => radio.disabled = false);
+                barLengthSelect.disabled = false; 
+                document.querySelectorAll('input[name="soundType"]').forEach(radio => radio.disabled = false); 
+                // Re-enable sampled radio only if samples loaded successfully
+                if (drumSampler && drumSampler.loaded) {
+                    soundTypeSampledRadio.disabled = false;
+                }
+                stopButton.disabled = true;
+                showMessage("Playback stopped.");
+            }
+        });
+
+        window.onload = function () {
+            setupStyleKnob();
+            // Initialize audio. This will also handle initial sample loading status
+            initializeAudio();
+
+            stopButton.disabled = true;
+            // Initially disable sampled radio until samples are confirmed loaded
+            soundTypeSampledRadio.disabled = true;
+        };
+
+        Tone.UserMedia.onDeviceError = (err) => {
+            showMessage(`Microphone error: ${err.message}`, true);
+            console.error("Microphone error:", err);
+        };
+    </script>
+</body>
+</html>
