@@ -1,0 +1,64 @@
+body {
+  background: url('jGlzr.jpg') repeat center center fixed;
+  background-size: cover;
+  color: #eee;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+.faceplate-panel {
+  background: url('faceplate.jpg') center center/cover no-repeat, #444;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.7);
+  padding: 40px 32px;
+  width: 100%;
+  max-width: 1000px;
+  min-height: 400px;
+  margin: 60px auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+h1, h2 {
+  color: #ffb300;
+  margin-bottom: 16px;
+}
+
+button, input[type="button"] {
+  background: #ffb300;
+  color: #222;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  margin: 8px 0;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+button:hover, input[type="button"]:hover {
+  background: #ff8800;
+}
+
+label {
+  display: block;
+  margin-bottom: 8px;
+  color: #ffb300;
+}
+
+input, select {
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #666;
+  background: #222;
+  color: #eee;
+  margin-bottom: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+

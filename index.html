@@ -4,38 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Krautrock Drum Machine</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <!-- Content Security Policy:
+        'self' allows scripts/resources from the same origin.
+        https://cdnjs.cloudflare.com is for Tone.js library.
+        'unsafe-eval' allows for dynamic code evaluation (needed by some Tone.js internal mechanisms).
+        'unsafe-inline' allows for inline <script> blocks and inline event handlers.
+        'blob:' allows for resources created as Blob URLs (used by Web Workers in Tone.js).
+        Removed https://tonejs.github.io as samples are now local.
+    -->
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com 'unsafe-eval' 'unsafe-inline' blob:;">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Wood grain background for the body */
-        body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #3d2c20 0%, #2a1f18 50%, #3d2c20 100%); /* Dark wood grain simulation */
-            color: #e2e8f0; /* Light text for contrast */
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-            background-attachment: fixed; /* Keep wood grain fixed */
-        }
-
-        /* Brushed metal black faceplate for the container */
-        .container {
-            background-color: #1a1a1a; /* Darker black */
-            background: linear-gradient(180deg, #2a2a2a, #1a1a1a); /* Subtle brushed effect */
-            border-radius: 1rem;
-            padding: 2.5rem;
-            box-shadow: 0 15px 25px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.05); /* Deep shadow with subtle inner highlight */
-            max-width: 500px;
-            width: 100%;
-            text-align: center;
-            border: 1px solid #333333;
-        }
-
         h1 {
             font-family: 'Inter', sans-serif; /* Keep Inter but make it bolder */
             font-size: 2.5rem; /* Slightly larger */
@@ -45,11 +26,13 @@
             text-shadow: 0 0 8px rgba(224, 43, 32, 0.6); /* Subtle glow effect */
         }
 
+        /* Adjust control-group for grid context */
         .control-group {
-            margin-bottom: 2rem;
+            margin-bottom: 1rem; /* Reduce bottom margin as grid provides spacing */
             display: flex;
             flex-direction: column;
             align-items: center;
+            padding: 10px; /* Add some padding inside each control group */
         }
 
         label {
@@ -133,7 +116,6 @@
         .tempo-input-group span {
             color: #cbd5e0;
         }
-
 
         /* Style Knob (simulated with radio buttons) */
         .knob-container {
@@ -306,55 +288,83 @@
             box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
         }
 
+        /* New styles for control columns */
+        .controls-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Single column by default for mobile */
+            gap: 2rem; /* Spacing between columns and rows */
+            width: 100%;
+            max-width: 1000px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        @media (min-width: 768px) {
+            .controls-grid {
+                grid-template-columns: 1fr 1fr; /* Two columns for tablet/desktop */
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .controls-grid {
+                grid-template-columns: 1fr 1fr 1fr; /* Three columns for larger desktops */
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+  <div class="faceplate-panel">
         <h1>Krautrock Beat Machine</h1>
 
-        <div class="control-group">
-            <label for="tempo">Tempo:</label>
-            <input type="range" id="tempo" min="60" max="180" value="120">
-            <span id="tempoValue">120 BPM</span>
-            <div class="tempo-controls">
-                <div class="tempo-input-group">
-                    <input type="number" id="bpmInput" min="60" max="180" value="120">
-                    <span>BPM</span>
+        <div class="controls-grid">
+            <!-- Tempo Control Group (remains first) -->
+            <div class="control-group">
+                <label for="tempo">Tempo:</label>
+                <input type="range" id="tempo" min="60" max="180" value="120">
+                <span id="tempoValue">120 BPM</span>
+                <div class="tempo-controls">
+                    <div class="tempo-input-group">
+                        <input type="number" id="bpmInput" min="60" max="180" value="120">
+                        <span>BPM</span>
+                    </div>
+                    <button id="tapTempoButton" class="button">Tap Tempo</button>
                 </div>
-                <button id="tapTempoButton" class="button">Tap Tempo</button>
             </div>
-        </div>
 
-        <div class="control-group">
-            <label for="barLength">Pattern Length:</label>
-            <select id="barLength" class="bar-length-select">
-                <option value="1">1 Bar</option>
-                <option value="2">2 Bars</option>
-                <option value="3">3 Bars</option>
-                <option value="4">4 Bars</option>
-            </select>
-        </div>
-
-        <div class="control-group">
-            <label>Drum Sound Type:</label>
-            <div class="flex gap-4">
-                <label class="inline-flex items-center">
-                    <input type="radio" name="soundType" value="synthesized" checked class="form-radio" id="soundTypeSynthesized">
-                    <span class="ml-2 text-white">Synthesized</span>
-                </label>
-                <label class="inline-flex items-center">
-                    <input type="radio" name="soundType" value="sampled" class="form-radio" id="soundTypeSampled">
-                    <span class="ml-2 text-white">Sampled</span>
-                </label>
+            <!-- Pattern Length Control Group (moved under Tempo) -->
+            <div class="control-group">
+                <label for="barLength">Pattern Length:</label>
+                <select id="barLength" class="bar-length-select">
+                    <option value="1">1 Bar</option>
+                    <option value="2">2 Bars</option>
+                    <option value="3">3 Bars</option>
+                    <option value="4">4 Bars</option>
+                </select>
             </div>
-        </div>
+            
+            <!-- Style Control Group (remains in its original conceptual column) -->
+            <div class="control-group">
+                <label>Style:</label>
+                <div class="knob-container" id="styleKnob">
+                    <div class="knob-pointer" id="knobPointer"></div>
+                    <div class="style-options">
+                      <!-- Options will be dynamically added here -->
+                    </div>
+                </div>
+            </div>
 
-        <div class="control-group">
-            <label>Style:</label>
-            <div class="knob-container" id="styleKnob">
-                <div class="knob-pointer" id="knobPointer"></div>
-                <div class="style-options">
-                    <!-- Options will be dynamically added here -->
+            <!-- Drum Sound Type Control Group (moved to be with Style Knob) -->
+            <div class="control-group">
+                <label>Drum Sound Type:</label>
+                <div class="flex gap-4">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="soundType" value="synthesized" checked class="form-radio" id="soundTypeSynthesized">
+                        <span class="ml-2 text-white">Synthesized</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="soundType" value="sampled" class="form-radio" id="soundTypeSampled">
+                        <span class="ml-2 text-white">Sampled</span>
+                    </label>
                 </div>
             </div>
         </div>
@@ -522,74 +532,66 @@
             }
         }
 
-        // Initialize Tone.js and Synths
-        async function initializeAudio() {
-            try {
-                await Tone.start();
-                console.log('Audio context started');
-                showMessage("Audio context started. Initializing synths and loading samples...");
+        // Initialize Tone.js Synths and Sampler (without starting audio context)
+        async function initializeAudioModules() {
+            console.log('Initializing synths and loading samples...');
 
-                // Initialize Synths
-                kickSynth = new Tone.MembraneSynth({
-                    pitchDecay: 0.05, octaves: 10, oscillator: { type: 'sine' },
-                    envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 0.8, amplitude: 1.2 }
-                }).toDestination();
+            // Initialize Synths
+            kickSynth = new Tone.MembraneSynth({
+                pitchDecay: 0.05, octaves: 10, oscillator: { type: 'sine' },
+                envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 0.8, amplitude: 1.2 }
+            }).toDestination();
 
-                snareSynth = new Tone.MembraneSynth({
-                    pitchDecay: 0.05, octaves: 5, oscillator: { type: 'sine' },
-                    envelope: { attack: 0.001, decay: 0.1, sustain: 0.01, release: 0.2, amplitude: 1.0 }
-                }).toDestination();
+            snareSynth = new Tone.MembraneSynth({
+                pitchDecay: 0.05, octaves: 5, oscillator: { type: 'sine' },
+                envelope: { attack: 0.001, decay: 0.1, sustain: 0.01, release: 0.2, amplitude: 1.0 }
+            }).toDestination();
 
-                snareNoise = new Tone.NoiseSynth({ 
-                    noise: { type: 'white' },
-                    envelope: { attack: 0.001, decay: 0.15, sustain: 0.0, release: 0.05 }
-                }).toDestination();
+            snareNoise = new Tone.NoiseSynth({ 
+                noise: { type: 'white' },
+                envelope: { attack: 0.001, decay: 0.15, sustain: 0.0, release: 0.05 }
+            }).toDestination();
 
-                hihatSynth = new Tone.NoiseSynth({
-                    noise: { type: 'white' },
-                    envelope: { attack: 0.001, decay: 0.05, sustain: 0.0, release: 0.05 }
-                }).toDestination();
+            hihatSynth = new Tone.NoiseSynth({
+                noise: { type: 'white' },
+                envelope: { attack: 0.001, decay: 0.05, sustain: 0.0, release: 0.05 }
+            }).toDestination();
 
-                percussionSynth = new Tone.Synth({
-                    oscillator: { type: 'triangle' },
-                    envelope: { attack: 0.01, decay: 0.1, sustain: 0.0, release: 0.1 },
-                    volume: -10 
-                }).toDestination();
+            percussionSynth = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.0, release: 0.1 },
+                volume: -10 
+            }).toDestination();
 
-                // Initialize Sampler
-                drumSampler = new Tone.Sampler({
-                    urls: {
-                        "C2": "https://tonejs.github.io/audio/drum-samples/kick-808.mp3",
-                        "C3": "https://tonejs.github.io/audio/drum-samples/snare-808.mp3",
-                        "F#2": "https://tonejs.github.io/audio/drum-samples/hihat.mp3",
-                        "G#2": "https://tonejs.github.io/audio/drum-samples/clap.mp3" // Using clap for generic percussion
-                    },
-                    onload: () => {
-                        showMessage("Sampled drums loaded successfully!");
-                        // If samples load, ensure the radio button is enabled
-                        soundTypeSampledRadio.disabled = false;
-                    },
-                    onerror: (e) => {
-                        showMessage(`Error loading sampled drums: ${e}. Reverting to synthesized drums.`, true);
-                        console.error("Error loading sampled drums:", e);
-                        // If samples fail, force synthesized and disable the sampled option
-                        soundTypeSynthesizedRadio.checked = true;
-                        activeSoundType = 'synthesized';
-                        soundTypeSampledRadio.disabled = true;
-                        updatePattern(activeStyle, activeBarLength); // Update pattern to use synths
-                    }
-                }).toDestination();
+            // Initialize Sampler with local samples
+            drumSampler = new Tone.Sampler({
+                urls: {
+                    "C2": "Kit 1 - Acoustic close/CYCdh_K1close_Kick-01.wav",
+                    "C3": "Kit 1 - Acoustic close/CYCdh_K1close_Snr-01.wav",
+                    "F#2": "Kit 1 - Acoustic close/CYCdh_K1close_ClHat-01.wav",
+                    "G#2": "Kit 1 - Acoustic close/CYCdh_K1close_Clap-01.wav" // Assumed path for clap based on naming convention
+                },
+                onload: () => {
+                    showMessage("Sampled drums loaded successfully!");
+                    // If samples load, ensure the radio button is enabled
+                    soundTypeSampledRadio.disabled = false;
+                },
+                onerror: (e) => {
+                    showMessage(`Error loading sampled drums: ${e}. Reverting to synthesized drums. Please check local sample paths.`, true);
+                    console.error("Error loading sampled drums:", e);
+                    // If samples fail, force synthesized and disable the sampled option
+                    soundTypeSynthesizedRadio.checked = true;
+                    activeSoundType = 'synthesized';
+                    soundTypeSampledRadio.disabled = true;
+                    updatePattern(activeStyle, activeBarLength); // Update pattern to use synths
+                }
+            }).toDestination();
 
 
-                // Set initial tempo
-                setTempo(tempoSlider.value);
-                // Set initial pattern with default bar length and sound type
-                updatePattern(activeStyle, activeBarLength);
-
-            } catch (error) {
-                showMessage(`Failed to start audio: ${error.message}. Please enable audio playback.`, true);
-                console.error("Error initializing audio:", error);
-            }
+            // Set initial tempo
+            setTempo(tempoSlider.value);
+            // Set initial pattern with default bar length and sound type
+            updatePattern(activeStyle, activeBarLength);
         }
 
         // Function to update the drum pattern based on selected style and bar length
@@ -748,8 +750,10 @@
 
         playButton.addEventListener('click', async () => {
             if (!isPlaying) {
+                // Only start audio context on user gesture
                 if (Tone.Transport.state !== 'started') {
                     await Tone.start(); 
+                    console.log('Audio context started on user gesture.');
                 }
                 Tone.Transport.start();
                 isPlaying = true;
@@ -783,8 +787,8 @@
 
         window.onload = function () {
             setupStyleKnob();
-            // Initialize audio. This will also handle initial sample loading status
-            initializeAudio();
+            // Initialize audio modules (synths, sampler) without starting audio context
+            initializeAudioModules();
 
             stopButton.disabled = true;
             // Initially disable sampled radio until samples are confirmed loaded
@@ -796,10 +800,6 @@
             console.error("Microphone error:", err);
         };
     </script>
-    <script src="src/FacePlate.js"></script>
     <script src="dist/bundle.js"></script>
-    <script>
-      // initFacePlate();
-    </script>
 </body>
 </html>
