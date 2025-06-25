@@ -28,9 +28,9 @@ const woodPanelMesh = new THREE.Mesh(woodPanelGeometry, woodPanelMaterial);
 // ...add woodPanelMesh to scene...
 
 // Use only local sample paths
-const kickSample = 'Kit 1 - Acoustic close/CYCdh_K1close_Kick-01.wav';
-const snareSample = 'Kit 1 - Acoustic close/CYCdh_K1close_Snr-01.wav';
-const hihatSample = 'Kit 1 - Acoustic close/CYCdh_K1close_ClHat-01.wav';
+const kickSample = 'Kit-1-Acoustic/CYCdh_K1close_Kick-01.wav';
+const snareSample = 'Kit-1-Acoustic/CYCdh_K1close_Snr-01.wav';
+const hihatSample = 'Kit-1-Acoustic/CYCdh_K1close_ClHat-01.wav';
 
 // Example with Tone.js Player (after user gesture)
 const kickPlayer = new Tone.Player(kickSample).toDestination();

@@ -11,9 +11,10 @@
         'unsafe-eval' allows for dynamic code evaluation (needed by some Tone.js internal mechanisms).
         'unsafe-inline' allows for inline <script> blocks and inline event handlers.
         'blob:' allows for resources created as Blob URLs (used by Web Workers in Tone.js).
-        Removed https://tonejs.github.io as samples are now local.
+        'data:' allows for data URIs (Base64 encoded assets).
+        Added 'https://raw.githubusercontent.com' to allow loading external samples from GitHub.
     -->
-    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com 'unsafe-eval' 'unsafe-inline' blob:;">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com 'unsafe-eval' 'unsafe-inline' blob: data: https://raw.githubusercontent.com;">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
@@ -229,7 +230,6 @@
             cursor: not-allowed;
         }
 
-
         /* Buttons */
         .button {
             background: linear-gradient(180deg, #E02B20, #C21F14); /* Red gradient for buttons */
@@ -257,7 +257,7 @@
         .button:active {
             transform: translateY(0);
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-            background: #C21F14; /* Solid darker red on active */
+            background: #C21F1F; /* Solid darker red on active */
         }
         
         .button:disabled {
@@ -362,8 +362,12 @@
                         <span class="ml-2 text-white">Synthesized</span>
                     </label>
                     <label class="inline-flex items-center">
-                        <input type="radio" name="soundType" value="sampled" class="form-radio" id="soundTypeSampled">
-                        <span class="ml-2 text-white">Sampled</span>
+                        <input type="radio" name="soundType" value="808" class="form-radio" id="soundType808">
+                        <span class="ml-2 text-white">808</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="soundType" value="acoustic" class="form-radio" id="soundTypeAcoustic">
+                        <span class="ml-2 text-white">Sampled (Acoustic)</span>
                     </label>
                 </div>
             </div>
@@ -381,7 +385,7 @@
         // Global variables for Firebase configuration, if applicable (will be provided by Canvas runtime)
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? initialAuthToken : null; 
 
         // Tone.js variables
         let kickSynth;
@@ -389,7 +393,8 @@
         let hihatSynth;
         let snareNoise; 
         let percussionSynth; 
-        let drumSampler; // New: Sampler for sampled drums
+        let drumPlayers808; 
+        let drumPlayersAcoustic; 
 
         let drumLoop;
         let currentPattern = [];
@@ -490,8 +495,8 @@
         const stopButton = document.getElementById('stopButton');
         const messageBox = document.getElementById('messageBox');
         const soundTypeSynthesizedRadio = document.getElementById('soundTypeSynthesized');
-        const soundTypeSampledRadio = document.getElementById('soundTypeSampled');
-
+        const soundType808Radio = document.getElementById('soundType808'); 
+        const soundTypeAcousticRadio = document.getElementById('soundTypeAcoustic'); 
 
         let activeStyle = "Neu!"; // Default style
         let activeBarLength = 1; // Default bar length
@@ -499,7 +504,7 @@
 
         // Tap Tempo variables
         let tapTimes = [];
-        const TAP_RESET_THRESHOLD = 2000; // milliseconds to reset tap count if no tap occurs
+        const TAP_RESET_THRESHOLD = 2000; // milliseconds to reset tap tempo count if no tap occurs
 
         // Function to display messages
         function showMessage(message, isError = false) {
@@ -532,61 +537,84 @@
             }
         }
 
-        // Initialize Tone.js Synths and Sampler (without starting audio context)
+        // Initialize Tone.js Synths and Players (without starting audio context)
         async function initializeAudioModules() {
             console.log('Initializing synths and loading samples...');
 
-            // Initialize Synths
+            // --- Kick Drum (Tone.MembraneSynth) ---
             kickSynth = new Tone.MembraneSynth({
                 pitchDecay: 0.05, octaves: 10, oscillator: { type: 'sine' },
                 envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 0.8, amplitude: 1.2 }
             }).toDestination();
 
+            // --- Snare Drum (Tone.MembraneSynth + Tone.NoiseSynth) ---
             snareSynth = new Tone.MembraneSynth({
                 pitchDecay: 0.05, octaves: 5, oscillator: { type: 'sine' },
                 envelope: { attack: 0.001, decay: 0.1, sustain: 0.01, release: 0.2, amplitude: 1.0 }
             }).toDestination();
-
             snareNoise = new Tone.NoiseSynth({ 
                 noise: { type: 'white' },
                 envelope: { attack: 0.001, decay: 0.15, sustain: 0.0, release: 0.05 }
             }).toDestination();
 
+            // --- Hi-Hat (Tone.NoiseSynth) ---
             hihatSynth = new Tone.NoiseSynth({
                 noise: { type: 'white' },
                 envelope: { attack: 0.001, decay: 0.05, sustain: 0.0, release: 0.05 }
             }).toDestination();
 
+            // --- Percussion (Tone.Synth) ---
             percussionSynth = new Tone.Synth({
                 oscillator: { type: 'triangle' },
                 envelope: { attack: 0.01, decay: 0.1, sustain: 0.0, release: 0.1 },
                 volume: -10 
             }).toDestination();
 
-            // Initialize Sampler with local samples
-            drumSampler = new Tone.Sampler({
+            // Initialize 808 Players
+            drumPlayers808 = new Tone.Players({
                 urls: {
-                    "C2": "Kit 1 - Acoustic close/CYCdh_K1close_Kick-01.wav",
-                    "C3": "Kit 1 - Acoustic close/CYCdh_K1close_Snr-01.wav",
-                    "F#2": "Kit 1 - Acoustic close/CYCdh_K1close_ClHat-01.wav",
-                    "G#2": "Kit 1 - Acoustic close/CYCdh_K1close_Clap-01.wav" // Assumed path for clap based on naming convention
+                    "C2": "https://raw.githubusercontent.com/JamaicaF/miniRhythm/master/audio/808-kick128.mp3", // Kick
+                    "C3": "https://raw.githubusercontent.com/JamaicaF/miniRhythm/master/audio/snare128.mp3", // Snare
+                    "F#2": "https://raw.githubusercontent.com/JamaicaF/miniRhythm/master/audio/808-chh128.mp3", // Closed Hi-Hat
+                    "G#2": "https://raw.githubusercontent.com/JamaicaF/miniRhythm/master/audio/clap128.mp3" // Clap (as percussion)
                 },
                 onload: () => {
-                    showMessage("Sampled drums loaded successfully!");
-                    // If samples load, ensure the radio button is enabled
-                    soundTypeSampledRadio.disabled = false;
+                    showMessage("808 drum samples loaded successfully!");
+                    if (drumPlayers808.loaded) {
+                        soundType808Radio.disabled = false; 
+                    }
                 },
                 onerror: (e) => {
-                    showMessage(`Error loading sampled drums: ${e}. Reverting to synthesized drums. Please check local sample paths.`, true);
-                    console.error("Error loading sampled drums:", e);
-                    // If samples fail, force synthesized and disable the sampled option
-                    soundTypeSynthesizedRadio.checked = true;
-                    activeSoundType = 'synthesized';
-                    soundTypeSampledRadio.disabled = true;
-                    updatePattern(activeStyle, activeBarLength); // Update pattern to use synths
-                }
+                    showMessage(`Error loading 808 drum samples: ${e}.`, true);
+                    console.error("Error loading 808 drum samples:", e);
+                    soundType808Radio.disabled = true; 
+                },
+                volume: 0 
             }).toDestination();
 
+            // Initialize Acoustic Players with Base64 placeholder samples.
+            // These are small silent WAV files. Replace them with your own Base64 encoded
+            // acoustic drum samples for actual sounds.
+            drumPlayersAcoustic = new Tone.Players({
+                urls: {
+                    "C2": "data:audio/wav;base64,UklGRqYAAABXQVZFZm10IBAAAAABAAEARKwAAQAgAZGF0YQHqAAAAaQAAAFZBVlGBAAAAZAIAAAAA==",   // Placeholder Kick (0.1s silent WAV)
+                    "C3": "data:audio/wav;base64,UklGRqYAAABXQVZFZm10IBAAAAABAAEARKwAAQAgAZGF0YQHqAAAAaQAAAFZBVlGBAAAAZAIAAAAA==",  // Placeholder Snare (0.1s silent WAV)
+                    "F#2": "data:audio/wav;base64,UklGRqYAAABXQVZFZm10IBAAAAABAAEARKwAAQAgAZGF0YQHqAAAAaQAAAFZBVlGBAAAAZAIAAAAA==", // Placeholder Hi-Hat (0.1s silent WAV)
+                    "G#2": "data:audio/wav;base64,UklGRqYAAABXQVZFZm10IBAAAAABAAEARKwAAQAgAZGF0YQHqAAAAaQAAAFZBVlGBAAAAZAIAAAAA=="   // Placeholder Clap (0.1s silent WAV)
+                },
+                onload: () => {
+                    showMessage("Acoustic drum samples (Base64 placeholders) loaded successfully! You can replace these with your own.");
+                    if (drumPlayersAcoustic.loaded) {
+                        soundTypeAcousticRadio.disabled = false; 
+                    }
+                },
+                onerror: (e) => {
+                    showMessage(`Error loading acoustic drum samples (Base64 check failed): ${e}.`, true);
+                    console.error("Error loading acoustic drum samples:", e);
+                    soundTypeAcousticRadio.disabled = true; 
+                },
+                volume: 0 
+            }).toDestination();
 
             // Set initial tempo
             setTempo(tempoSlider.value);
@@ -629,19 +657,48 @@
                                 default:
                                     console.warn(`Unknown note for synthesized drum synth: ${note}`);
                             }
-                        } else if (activeSoundType === 'sampled') {
-                            // Check if sampler is loaded and the note is available in the sampler
-                            if (drumSampler && drumSampler.loaded && drumSampler.has(note)) {
-                                drumSampler.triggerAttackRelease(note, "16n", time);
+                        } else if (activeSoundType === '808') {
+                            if (drumPlayers808 && drumPlayers808.loaded && drumPlayers808.has(note)) {
+                                try {
+                                    drumPlayers808.player(note).start(time);
+                                    console.log(`Playing 808 sampled note: ${note}`);
+                                } catch (playbackError) {
+                                    console.error(`Playback Error for 808 note ${note} using Players:`, playbackError);
+                                    showMessage(`Playback issue with 808 drums for note ${note}. Reverting to synthesized.`, true);
+                                    soundTypeSynthesizedRadio.checked = true;
+                                    activeSoundType = 'synthesized';
+                                    soundType808Radio.disabled = true; 
+                                }
                             } else {
-                                // Fallback to synthesized if sampled note isn't available
-                                console.warn(`Note ${note} not available in sampler, using synth as fallback.`);
+                                console.warn(`808 sample ${note} not available or players not loaded. Using synth as fallback.`);
                                 switch (note) {
                                     case "C2": kickSynth.triggerAttackRelease("C2", "16n", time); break;
                                     case "C3": snareSynth.triggerAttackRelease("C3", "16n", time); snareNoise.triggerAttackRelease("16n", time); break;
                                     case "F#2": hihatSynth.triggerAttackRelease("16n", time); break;
                                     case "G#2": percussionSynth.triggerAttackRelease("G#2", "16n", time); break;
-                                    default: console.warn(`Note ${note} not available in sampler, no synth fallback for this note.`);
+                                    default: console.warn(`Note ${note} not available, no synth fallback.`);
+                                }
+                            }
+                        } else if (activeSoundType === 'acoustic') {
+                            if (drumPlayersAcoustic && drumPlayersAcoustic.loaded && drumPlayersAcoustic.has(note)) {
+                                try {
+                                    drumPlayersAcoustic.player(note).start(time);
+                                    console.log(`Playing acoustic sampled note: ${note}`);
+                                } catch (playbackError) {
+                                    console.error(`Playback Error for acoustic note ${note} using Players:`, playbackError);
+                                    showMessage(`Playback issue with acoustic drums for note ${note}. Reverting to synthesized.`, true);
+                                    soundTypeSynthesizedRadio.checked = true;
+                                    activeSoundType = 'synthesized';
+                                    soundTypeAcousticRadio.disabled = true; 
+                                }
+                            } else {
+                                console.warn(`Acoustic sample ${note} not available or players not loaded. Using synth as fallback.`);
+                                switch (note) {
+                                    case "C2": kickSynth.triggerAttackRelease("C2", "16n", time); break;
+                                    case "C3": snareSynth.triggerAttackRelease("C3", "16n", time); snareNoise.triggerAttackRelease("16n", time); break;
+                                    case "F#2": hihatSynth.triggerAttackRelease("16n", time); break;
+                                    case "G#2": percussionSynth.triggerAttackRelease("G#2", "16n", time); break;
+                                    default: console.warn(`Note ${note} not available, no synth fallback.`);
                                 }
                             }
                         }
@@ -776,10 +833,16 @@
                 document.querySelectorAll('.style-option input[type="radio"]').forEach(radio => radio.disabled = false);
                 barLengthSelect.disabled = false; 
                 document.querySelectorAll('input[name="soundType"]').forEach(radio => radio.disabled = false); 
-                // Re-enable sampled radio only if samples loaded successfully
-                if (drumSampler && drumSampler.loaded) {
-                    soundTypeSampledRadio.disabled = false;
+                
+                // Re-enable 808 radio if loaded
+                if (drumPlayers808 && drumPlayers808.loaded) {
+                    soundType808Radio.disabled = false;
                 }
+                // Re-enable Acoustic radio if loaded
+                if (drumPlayersAcoustic && drumPlayersAcoustic.loaded) {
+                    soundTypeAcousticRadio.disabled = false;
+                }
+
                 stopButton.disabled = true;
                 showMessage("Playback stopped.");
             }
@@ -787,12 +850,13 @@
 
         window.onload = function () {
             setupStyleKnob();
-            // Initialize audio modules (synths, sampler) without starting audio context
+            // Initialize audio modules (synths, players) without starting audio context
             initializeAudioModules();
 
             stopButton.disabled = true;
-            // Initially disable sampled radio until samples are confirmed loaded
-            soundTypeSampledRadio.disabled = true;
+            // Initially disable sampled radios until samples are confirmed loaded
+            soundType808Radio.disabled = true;
+            soundTypeAcousticRadio.disabled = true;
         };
 
         Tone.UserMedia.onDeviceError = (err) => {
@@ -800,6 +864,6 @@
             console.error("Microphone error:", err);
         };
     </script>
-    <script src="dist/bundle.js"></script>
+    <!-- The <script src="dist/bundle.js"></script> line has been removed to prevent conflicts. -->
 </body>
 </html>
