@@ -12,7 +12,7 @@
         'unsafe-inline' allows for inline <script> blocks and inline event handlers.
         'blob:' allows for resources created as Blob URLs (used by Web Workers in Tone.js).
         'data:' allows for data URIs (Base64 encoded assets).
-        Added 'https://raw.githubusercontent.com' to allow loading external samples from GitHub.
+        Removed external domain for acoustic samples as they will now be loaded locally.
     -->
     <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdnjs.cloudflare.com 'unsafe-eval' 'unsafe-inline' blob: data: https://raw.githubusercontent.com;">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
@@ -570,7 +570,7 @@
                 volume: -10 
             }).toDestination();
 
-            // Initialize 808 Players
+            // Initialize 808 Players (using external URLs)
             drumPlayers808 = new Tone.Players({
                 urls: {
                     "C2": "https://raw.githubusercontent.com/JamaicaF/miniRhythm/master/audio/808-kick128.mp3", // Kick
@@ -592,28 +592,36 @@
                 volume: 0 
             }).toDestination();
 
-            // Initialize Acoustic Players with Base64 placeholder samples.
-            // These are small silent WAV files. Replace them with your own Base64 encoded
-            // acoustic drum samples for actual sounds.
+            // --- Acoustic Players - Using LOCAL files with adjusted volumes ---
+            // Ensure you have an 'audio' folder in the same directory as index.html
+            // and that it contains 'kick.wav', 'snare.wav', 'closedHat.wav', and 'openHat.wav'
             drumPlayersAcoustic = new Tone.Players({
                 urls: {
-                    "C2": "data:audio/wav;base64,UklGRqYAAABXQVZFZm10IBAAAAABAAEARKwAAQAgAZGF0YQHqAAAAaQAAAFZBVlGBAAAAZAIAAAAA==",   // Placeholder Kick (0.1s silent WAV)
-                    "C3": "data:audio/wav;base64,UklGRqYAAABXQVZFZm10IBAAAAABAAEARKwAAQAgAZGF0YQHqAAAAaQAAAFZBVlGBAAAAZAIAAAAA==",  // Placeholder Snare (0.1s silent WAV)
-                    "F#2": "data:audio/wav;base64,UklGRqYAAABXQVZFZm10IBAAAAABAAEARKwAAQAgAZGF0YQHqAAAAaQAAAFZBVlGBAAAAZAIAAAAA==", // Placeholder Hi-Hat (0.1s silent WAV)
-                    "G#2": "data:audio/wav;base64,UklGRqYAAABXQVZFZm10IBAAAAABAAEARKwAAQAgAZGF0YQHqAAAAaQAAAFZBVlGBAAAAZAIAAAAA=="   // Placeholder Clap (0.1s silent WAV)
+                    "C2": "audio/kick.wav",   // Acoustic Kick
+                    "C3": "audio/snare.wav",  // Acoustic Snare
+                    "F#2": "audio/closedHat.wav", // Acoustic Closed Hi-Hat
+                    "G#2": "audio/openHat.wav"   // Acoustic Open Hi-Hat
                 },
                 onload: () => {
-                    showMessage("Acoustic drum samples (Base64 placeholders) loaded successfully! You can replace these with your own.");
+                    showMessage("Acoustic drum samples loaded successfully from local files!");
+                    // Set individual volumes after all samples are loaded
+                    drumPlayersAcoustic.player("C2").volume.value = 0;   // Kick slightly louder
+                    drumPlayersAcoustic.player("C3").volume.value = 0;   // Snare slightly louder
+                    drumPlayersAcoustic.player("F#2").volume.value = -8; // Closed Hi-Hat quieter
+                    drumPlayersAcoustic.player("G#2").volume.value = -8; // Open Hi-Hat quieter
+
                     if (drumPlayersAcoustic.loaded) {
                         soundTypeAcousticRadio.disabled = false; 
                     }
                 },
                 onerror: (e) => {
-                    showMessage(`Error loading acoustic drum samples (Base64 check failed): ${e}.`, true);
+                    // This error means the files might not be in the 'audio' folder,
+                    // or there's a typo in the filename, or a problem with the file itself.
+                    showMessage(`Error loading acoustic drum samples from local files. Make sure they are in the 'audio' folder and named correctly: ${e}.`, true);
                     console.error("Error loading acoustic drum samples:", e);
                     soundTypeAcousticRadio.disabled = true; 
                 },
-                volume: 0 
+                volume: 0 // Default master volume for the Players group (individual players will override)
             }).toDestination();
 
             // Set initial tempo
@@ -680,6 +688,7 @@
                                 }
                             }
                         } else if (activeSoundType === 'acoustic') {
+                            // Only attempt to play if the acoustic players object is initialized and loaded
                             if (drumPlayersAcoustic && drumPlayersAcoustic.loaded && drumPlayersAcoustic.has(note)) {
                                 try {
                                     drumPlayersAcoustic.player(note).start(time);
@@ -692,7 +701,7 @@
                                     soundTypeAcousticRadio.disabled = true; 
                                 }
                             } else {
-                                console.warn(`Acoustic sample ${note} not available or players not loaded. Using synth as fallback.`);
+                                console.warn(`Acoustic sample ${note} not available or players not loaded/initialized. Using synth as fallback.`);
                                 switch (note) {
                                     case "C2": kickSynth.triggerAttackRelease("C2", "16n", time); break;
                                     case "C3": snareSynth.triggerAttackRelease("C3", "16n", time); snareNoise.triggerAttackRelease("16n", time); break;
@@ -745,7 +754,7 @@
                 const calculatedBpm = 60000 / averageInterval; 
 
                 setTempo(calculatedBpm);
-                showMessage(`Tapped tempo: ${Math.round(calculatedBpm)} BPM`);
+                showMessage(`Tapped tempo: ${Math.round(calculatedBpm)} BPM}`);
             } else {
                 showMessage("Keep tapping to set tempo.");
             }
@@ -807,7 +816,8 @@
 
         playButton.addEventListener('click', async () => {
             if (!isPlaying) {
-                // Only start audio context on user gesture
+                // IMPORTANT: Tone.start() MUST be called in response to a user gesture
+                // to resume the AudioContext. This addresses the browser warning.
                 if (Tone.Transport.state !== 'started') {
                     await Tone.start(); 
                     console.log('Audio context started on user gesture.');
@@ -838,7 +848,7 @@
                 if (drumPlayers808 && drumPlayers808.loaded) {
                     soundType808Radio.disabled = false;
                 }
-                // Re-enable Acoustic radio if loaded
+                // Re-enable Acoustic radio if loaded (check if initialized before checking loaded)
                 if (drumPlayersAcoustic && drumPlayersAcoustic.loaded) {
                     soundTypeAcousticRadio.disabled = false;
                 }
