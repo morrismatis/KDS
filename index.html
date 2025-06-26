@@ -29,11 +29,9 @@
 
         /* Adjust control-group for grid context */
         .control-group {
-            margin-bottom: 1rem; /* Reduce bottom margin as grid provides spacing */
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 10px; /* Add some padding inside each control group */
         }
 
         label {
@@ -288,37 +286,16 @@
             box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
         }
 
-        /* New styles for control columns */
-        .controls-grid {
-            display: grid;
-            grid-template-columns: 1fr; /* Single column by default for mobile */
-            gap: 2rem; /* Spacing between columns and rows */
-            width: 100%;
-            max-width: 1000px;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-
-        @media (min-width: 768px) {
-            .controls-grid {
-                grid-template-columns: 1fr 1fr; /* Two columns for tablet/desktop */
-            }
-        }
-
-        @media (min-width: 1024px) {
-            .controls-grid {
-                grid-template-columns: 1fr 1fr 1fr; /* Three columns for larger desktops */
-            }
-        }
     </style>
 </head>
 <body>
-  <div class="faceplate-panel">
+  <div class="wood-border-wrapper">
+    <div class="faceplate-panel">
         <h1>Krautrock Beat Machine</h1>
 
-        <div class="controls-grid">
-            <!-- Tempo Control Group (remains first) -->
-            <div class="control-group">
+        <div class="controls-grid"> 
+            <div class="control-group control-group-box">
+                <!-- Tempo Control Group -->
                 <label for="tempo">Tempo:</label>
                 <input type="range" id="tempo" min="60" max="180" value="120">
                 <span id="tempoValue">120 BPM</span>
@@ -331,8 +308,8 @@
                 </div>
             </div>
 
-            <!-- Pattern Length Control Group (moved under Tempo) -->
-            <div class="control-group">
+            <div class="control-group control-group-box">
+                <!-- Pattern Length Control Group -->
                 <label for="barLength">Pattern Length:</label>
                 <select id="barLength" class="bar-length-select">
                     <option value="1">1 Bar</option>
@@ -342,8 +319,8 @@
                 </select>
             </div>
             
-            <!-- Style Control Group (remains in its original conceptual column) -->
-            <div class="control-group">
+            <div class="control-group control-group-box">
+                <!-- Style Control Group -->
                 <label>Style:</label>
                 <div class="knob-container" id="styleKnob">
                     <div class="knob-pointer" id="knobPointer"></div>
@@ -353,22 +330,14 @@
                 </div>
             </div>
 
-            <!-- Drum Sound Type Control Group (moved to be with Style Knob) -->
-            <div class="control-group">
+            <div class="control-group control-group-box">
+                <!-- Drum Sound Type Control Group (now a knob) -->
                 <label>Drum Sound Type:</label>
-                <div class="flex gap-4">
-                    <label class="inline-flex items-center">
-                        <input type="radio" name="soundType" value="synthesized" checked class="form-radio" id="soundTypeSynthesized">
-                        <span class="ml-2 text-white">Synthesized</span>
-                    </label>
-                    <label class="inline-flex items-center">
-                        <input type="radio" name="soundType" value="808" class="form-radio" id="soundType808">
-                        <span class="ml-2 text-white">808</span>
-                    </label>
-                    <label class="inline-flex items-center">
-                        <input type="radio" name="soundType" value="acoustic" class="form-radio" id="soundTypeAcoustic">
-                        <span class="ml-2 text-white">Sampled (Acoustic)</span>
-                    </label>
+                <div class="knob-container" id="soundTypeKnob">
+                    <div class="knob-pointer" id="soundTypeKnobPointer"></div>
+                    <div class="style-options"> <!-- Re-using class for styling -->
+                      <!-- Options will be dynamically added here -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -380,6 +349,7 @@
 
         <div class="message-box hidden" id="messageBox"></div>
     </div>
+  </div>
 
     <script>
         // Global variables for Firebase configuration, if applicable (will be provided by Canvas runtime)
@@ -494,10 +464,10 @@
         const playButton = document.getElementById('playButton');
         const stopButton = document.getElementById('stopButton');
         const messageBox = document.getElementById('messageBox');
-        const soundTypeSynthesizedRadio = document.getElementById('soundTypeSynthesized');
-        const soundType808Radio = document.getElementById('soundType808'); 
-        const soundTypeAcousticRadio = document.getElementById('soundTypeAcoustic'); 
-
+        const soundTypeKnobContainer = document.getElementById('soundTypeKnob');
+        const soundTypeKnobPointer = document.getElementById('soundTypeKnobPointer');
+        const soundTypeOptionsContainer = soundTypeKnobContainer.querySelector('.style-options');
+ 
         let activeStyle = "Neu!"; // Default style
         let activeBarLength = 1; // Default bar length
         let activeSoundType = 'synthesized'; // Default sound type
@@ -580,14 +550,17 @@
                 },
                 onload: () => {
                     showMessage("808 drum samples loaded successfully!");
-                    if (drumPlayers808.loaded) {
-                        soundType808Radio.disabled = false; 
+                    if (drumPlayers808.loaded) { 
+                        const radio808 = document.querySelector('#soundTypeKnob input[value="808"]');
+                        if (radio808) radio808.disabled = false;
                     }
                 },
                 onerror: (e) => {
                     showMessage(`Error loading 808 drum samples: ${e}.`, true);
                     console.error("Error loading 808 drum samples:", e);
-                    soundType808Radio.disabled = true; 
+                    // Keep the radio disabled if it fails to load
+                    const radio808 = document.querySelector('#soundTypeKnob input[value="808"]');
+                    if (radio808) radio808.disabled = true;
                 },
                 volume: 0 
             }).toDestination();
@@ -609,9 +582,9 @@
                     drumPlayersAcoustic.player("C3").volume.value = 0;   // Snare slightly louder
                     drumPlayersAcoustic.player("F#2").volume.value = -8; // Closed Hi-Hat quieter
                     drumPlayersAcoustic.player("G#2").volume.value = -8; // Open Hi-Hat quieter
-
-                    if (drumPlayersAcoustic.loaded) {
-                        soundTypeAcousticRadio.disabled = false; 
+                    if (drumPlayersAcoustic.loaded) { 
+                        const radioAcoustic = document.querySelector('#soundTypeKnob input[value="acoustic"]');
+                        if (radioAcoustic) radioAcoustic.disabled = false;
                     }
                 },
                 onerror: (e) => {
@@ -619,7 +592,9 @@
                     // or there's a typo in the filename, or a problem with the file itself.
                     showMessage(`Error loading acoustic drum samples from local files. Make sure they are in the 'audio' folder and named correctly: ${e}.`, true);
                     console.error("Error loading acoustic drum samples:", e);
-                    soundTypeAcousticRadio.disabled = true; 
+                    // Keep the radio disabled if it fails to load
+                    const radioAcoustic = document.querySelector('#soundTypeKnob input[value="acoustic"]');
+                    if (radioAcoustic) radioAcoustic.disabled = true;
                 },
                 volume: 0 // Default master volume for the Players group (individual players will override)
             }).toDestination();
@@ -673,9 +648,14 @@
                                 } catch (playbackError) {
                                     console.error(`Playback Error for 808 note ${note} using Players:`, playbackError);
                                     showMessage(`Playback issue with 808 drums for note ${note}. Reverting to synthesized.`, true);
-                                    soundTypeSynthesizedRadio.checked = true;
                                     activeSoundType = 'synthesized';
-                                    soundType808Radio.disabled = true; 
+                                    const synthRadio = document.querySelector('#soundTypeKnob input[value="synthesized"]');
+                                    if (synthRadio) {
+                                        synthRadio.checked = true;
+                                        soundTypeKnobPointer.style.transform = `rotate(${parseFloat(synthRadio.parentElement.dataset.angle)}deg)`;
+                                    }
+                                    const radio808 = document.querySelector('#soundTypeKnob input[value="808"]');
+                                    if (radio808) radio808.disabled = true;
                                 }
                             } else {
                                 console.warn(`808 sample ${note} not available or players not loaded. Using synth as fallback.`);
@@ -696,9 +676,14 @@
                                 } catch (playbackError) {
                                     console.error(`Playback Error for acoustic note ${note} using Players:`, playbackError);
                                     showMessage(`Playback issue with acoustic drums for note ${note}. Reverting to synthesized.`, true);
-                                    soundTypeSynthesizedRadio.checked = true;
                                     activeSoundType = 'synthesized';
-                                    soundTypeAcousticRadio.disabled = true; 
+                                    const synthRadio = document.querySelector('#soundTypeKnob input[value="synthesized"]');
+                                    if (synthRadio) {
+                                        synthRadio.checked = true;
+                                        soundTypeKnobPointer.style.transform = `rotate(${parseFloat(synthRadio.parentElement.dataset.angle)}deg)`;
+                                    }
+                                    const radioAcoustic = document.querySelector('#soundTypeKnob input[value="acoustic"]');
+                                    if (radioAcoustic) radioAcoustic.disabled = true;
                                 }
                             } else {
                                 console.warn(`Acoustic sample ${note} not available or players not loaded/initialized. Using synth as fallback.`);
@@ -766,15 +751,6 @@
             showMessage(`Pattern length set to ${activeBarLength} bar(s).`);
         });
 
-        // Event listener for drum sound type selection
-        document.querySelectorAll('input[name="soundType"]').forEach(radio => {
-            radio.addEventListener('change', (event) => {
-                activeSoundType = event.target.value;
-                updatePattern(activeStyle, activeBarLength);
-                showMessage(`Drum sound type switched to: ${activeSoundType}.`);
-            });
-        });
-
         function setupStyleKnob() {
             const styleNames = Object.keys(baseStyles); 
             const numStyles = styleNames.length;
@@ -814,6 +790,56 @@
             });
         }
 
+        function setupSoundTypeKnob() {
+            const soundTypes = [
+                { name: 'Synthesized', value: 'synthesized' },
+                { name: '808', value: '808' },
+                { name: 'Acoustic', value: 'acoustic' }
+            ];
+            const numTypes = soundTypes.length;
+            const angleIncrement = numTypes > 1 ? 240 / (numTypes - 1) : 0;
+
+            soundTypes.forEach((type, index) => {
+                const label = document.createElement('label');
+                label.classList.add('style-option'); // Reuse class
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = 'soundType'; // Keep same name
+                radio.value = type.value;
+                if (type.value === activeSoundType) {
+                    radio.checked = true;
+                }
+
+                // Initially disable sampled options until they are loaded
+                if (type.value === '808' || type.value === 'acoustic') {
+                    radio.disabled = true;
+                }
+
+                const span = document.createElement('span');
+                span.textContent = type.name;
+
+                label.appendChild(radio);
+                label.appendChild(span);
+                soundTypeOptionsContainer.appendChild(label);
+
+                const angle = -120 + (index * angleIncrement);
+                label.style.transform = `rotate(${angle}deg) translate(0, -90px) rotate(${-angle}deg)`;
+                label.dataset.angle = angle;
+
+                radio.addEventListener('change', (event) => {
+                    activeSoundType = event.target.value;
+                    updatePattern(activeStyle, activeBarLength);
+                    showMessage(`Drum sound type switched to: ${type.name}.`);
+                    const selectedAngle = parseFloat(label.dataset.angle);
+                    soundTypeKnobPointer.style.transform = `rotate(${selectedAngle}deg)`;
+                });
+
+                if (type.value === activeSoundType) {
+                    soundTypeKnobPointer.style.transform = `rotate(${angle}deg)`;
+                }
+            });
+        }
+
         playButton.addEventListener('click', async () => {
             if (!isPlaying) {
                 // IMPORTANT: Tone.start() MUST be called in response to a user gesture
@@ -828,7 +854,7 @@
                 playButton.disabled = true;
                 document.querySelectorAll('.style-option input[type="radio"]').forEach(radio => radio.disabled = true);
                 barLengthSelect.disabled = true; 
-                document.querySelectorAll('input[name="soundType"]').forEach(radio => radio.disabled = true); 
+                document.querySelectorAll('#soundTypeKnob input[type="radio"]').forEach(radio => radio.disabled = true); 
                 stopButton.disabled = false;
                 showMessage(`Playing ${activeStyle} beat at ${tempoSlider.value} BPM for ${activeBarLength} bar(s) with ${activeSoundType} drums.`);
             }
@@ -842,16 +868,17 @@
                 playButton.disabled = false;
                 document.querySelectorAll('.style-option input[type="radio"]').forEach(radio => radio.disabled = false);
                 barLengthSelect.disabled = false; 
-                document.querySelectorAll('input[name="soundType"]').forEach(radio => radio.disabled = false); 
                 
-                // Re-enable 808 radio if loaded
-                if (drumPlayers808 && drumPlayers808.loaded) {
-                    soundType808Radio.disabled = false;
-                }
-                // Re-enable Acoustic radio if loaded (check if initialized before checking loaded)
-                if (drumPlayersAcoustic && drumPlayersAcoustic.loaded) {
-                    soundTypeAcousticRadio.disabled = false;
-                }
+                // Re-enable sound type radio buttons based on whether their samples have loaded
+                document.querySelectorAll('#soundTypeKnob input[type="radio"]').forEach(radio => {
+                    if (radio.value === 'synthesized') {
+                        radio.disabled = false;
+                    } else if (radio.value === '808') {
+                        radio.disabled = !(drumPlayers808 && drumPlayers808.loaded);
+                    } else if (radio.value === 'acoustic') {
+                        radio.disabled = !(drumPlayersAcoustic && drumPlayersAcoustic.loaded);
+                    }
+                });
 
                 stopButton.disabled = true;
                 showMessage("Playback stopped.");
@@ -860,13 +887,11 @@
 
         window.onload = function () {
             setupStyleKnob();
+            setupSoundTypeKnob();
             // Initialize audio modules (synths, players) without starting audio context
             initializeAudioModules();
 
             stopButton.disabled = true;
-            // Initially disable sampled radios until samples are confirmed loaded
-            soundType808Radio.disabled = true;
-            soundTypeAcousticRadio.disabled = true;
         };
 
         Tone.UserMedia.onDeviceError = (err) => {
